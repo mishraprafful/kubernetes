@@ -1229,10 +1229,12 @@ func (f *frameworkImpl) runScorePlugin(ctx context.Context, pl framework.ScorePl
 
 func (f *frameworkImpl) runScoreExtension(ctx context.Context, pl framework.ScorePlugin, state *framework.CycleState, pod *v1.Pod, nodeScoreList framework.NodeScoreList) *framework.Status {
 	if !state.ShouldRecordPluginMetrics() {
+		pl.ScoreExtensions().SeasonalScore(ctx, state, pod, nodeScoreList)
 		return pl.ScoreExtensions().NormalizeScore(ctx, state, pod, nodeScoreList)
 	}
 	startTime := time.Now()
-	status := pl.ScoreExtensions().NormalizeScore(ctx, state, pod, nodeScoreList)
+	status := pl.ScoreExtensions().SeasonalScore(ctx, state, pod, nodeScoreList)
+	status = pl.ScoreExtensions().NormalizeScore(ctx, state, pod, nodeScoreList)
 	f.metricsRecorder.ObservePluginDurationAsync(metrics.ScoreExtensionNormalize, pl.Name(), status.Code().String(), metrics.SinceInSeconds(startTime))
 	return status
 }
