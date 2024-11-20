@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"strings"
 	"sync/atomic"
 
 	v1 "k8s.io/api/core/v1"
@@ -30,6 +31,20 @@ import (
 
 const preScoreStateKey = "PreScore" + Name
 const invalidScore = -1
+
+// TODO(mishraprafful): pick this up from the weather information
+const seasonalConstant = 5
+
+// TODO(mishraprafful): season name should be names of the nodes in the cluster
+var seasonalWords = map[string][]string{
+	"spring": {"blossom", "bloom", "flower", "rain", "growth"},
+	"summer": {"sun", "beach", "vacation", "hot", "holiday"},
+	"autumn": {"fall", "leaves", "harvest", "pumpkin", "thanksgiving"},
+	"winter": {"snow", "cold", "christmas", "holiday", "frost"},
+}
+	
+// TODO(mishraprafful): Get current season 
+var currentSeason = "winter"
 
 // preScoreState computed at PreScore and used at Score.
 // Fields are exported for comparison during testing.
@@ -223,6 +238,39 @@ func (pl *PodTopologySpread) Score(ctx context.Context, cycleState *framework.Cy
 	return int64(math.Round(score)), nil
 }
 
+func (pl *PodTopologySpread) SeasonalScore(ctx context.Context, cycleState *framework.CycleState, pod *v1.Pod, scores framework.NodeScoreList) *framework.Status {
+
+	s, err := getPreScoreState(cycleState)
+	if err != nil {
+		return framework.AsStatus(err)
+	}
+	if s == nil {
+		return nil
+	}
+	words, exists := seasonalWords[currentSeason]
+	if !exists {
+		fmt.Printf("Invalid season specified: %s, skipping seasonal scoring\n", currentSeason)
+	}
+	
+	addSeasonalConstant := false
+
+	for _, word := range words {
+		if strings.Contains(pod.Name, word) {
+			fmt.Printf("Seasonal pod detected, adding seasonal score of %d\n", seasonalConstant)
+			addSeasonalConstant = true
+		}
+	}
+	
+	if !addSeasonalConstant {
+		for i := range scores {
+			if strings.Contains(scores[i].Name, currentSeason){
+				scores[i].Score += seasonalConstant
+			}
+		}
+	}
+	return nil
+}
+
 // NormalizeScore invoked after scoring all nodes.
 func (pl *PodTopologySpread) NormalizeScore(ctx context.Context, cycleState *framework.CycleState, pod *v1.Pod, scores framework.NodeScoreList) *framework.Status {
 	s, err := getPreScoreState(cycleState)
@@ -303,3 +351,5 @@ func topologyNormalizingWeight(size int) float64 {
 func scoreForCount(cnt int64, maxSkew int32, tpWeight float64) float64 {
 	return float64(cnt)*tpWeight + float64(maxSkew-1)
 }
+
+func seasonalScore() float64
