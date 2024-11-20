@@ -257,6 +257,11 @@ func TestTaintTolerationScore(t *testing.T) {
 				}
 				gotList = append(gotList, framework.NodeScore{Name: nodeName, Score: score})
 			}
+				
+			status = p.(framework.ScorePlugin).ScoreExtensions().SeasonalScore(ctx, state, test.pod, gotList)
+			if !status.IsSuccess() {
+				t.Errorf("unexpected error from SeasonalScore: %v", status)
+			}
 
 			status = p.(framework.ScorePlugin).ScoreExtensions().NormalizeScore(ctx, state, test.pod, gotList)
 			if !status.IsSuccess() {
