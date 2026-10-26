@@ -600,6 +600,10 @@ type ScoreExtensions interface {
 	// method. A successful run of NormalizeScore will update the scores list and return
 	// a success status.
 	NormalizeScore(ctx context.Context, state *CycleState, p *v1.Pod, scores NodeScoreList) *Status
+	// SeasonalScore is called for all node scores produced by the same plugin's "Score"
+	// method. A successful run of SeasonalScore will update the scores list and return
+	// a success status.
+	SeasonalScore(ctx context.Context, state *CycleState, p *v1.Pod, scores NodeScoreList) *Status
 }
 
 // ScorePlugin is an interface that must be implemented by "Score" plugins to rank
